@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Glance reader</title>
+<meta name="description" content="Read any book one word at a time, lined up on a red focus letter. Free, private and works offline.">
+<meta name="theme-color" content="#f1f2ef" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141618" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="preload" href="../assets/fonts/atkinson-hyperlegible-next-latin-066569.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../assets/glance.css">
+<link rel="stylesheet" href="../assets/app.css">
+<script defer src="../assets/core.js"></script>
+<script defer src="../assets/app.js"></script>
+</head>
+<body>
+
+<!-- ============ library ============ -->
+<main id="v-home" class="page" hidden>
+  <header class="top">
+    <a class="wordmark" href="../" aria-label="Glance home">gl<b>a</b>nce</a>
+    <div class="top-actions">
+      <button class="btn small" id="home-speed" title="Change your reading speed"><span class="num" id="home-wpm">350</span> wpm</button>
+      <button class="btn small icon" id="home-aa" title="Reading settings" aria-label="Reading settings">Aa</button>
+    </div>
+  </header>
+
+  <section class="continue" id="continue" hidden>
+    <p class="kicker" id="cont-kicker">Continue reading</p>
+    <div class="cont-head">
+      <h1 id="cont-title"></h1>
+      <p class="by" id="cont-by"></p>
+    </div>
+    <div class="bar" aria-hidden="true"><i id="cont-bar"></i></div>
+    <div class="facts-row" id="cont-facts"></div>
+    <div class="row"><button class="btn primary" id="cont-go">Resume</button></div>
+  </section>
+
+  <p class="stats" id="stats" hidden></p>
+
+  <section class="add" id="drop">
+    <div>
+      <h2>Add a book</h2>
+      <p>Drop a text file, EPUB or PDF anywhere on this page, or paste some text. Your books stay in this browser and are never uploaded.</p>
+    </div>
+    <div class="row">
+      <button class="btn" id="pick">Choose a file</button>
+      <button class="btn" id="paste-open">Paste text</button>
+    </div>
+    <p class="status" id="status" role="status" hidden></p>
+    <input type="file" id="file" accept=".txt,.text,.md,.epub,.pdf,text/plain,application/pdf,application/epub+zip" hidden>
+  </section>
+
+  <section id="lib-section" hidden>
+    <div class="sec-head"><h2>Your library</h2><span class="count" id="lib-count"></span></div>
+    <ul class="lib" id="lib"></ul>
+    <p class="note" id="lib-note" hidden>This browser isn't letting the page save books, so your library will be empty next time.</p>
+  </section>
+
+  <section id="free-section" hidden>
+    <div class="sec-head"><h2>Free books</h2><span class="count">Wider spines are longer books</span></div>
+    <div class="shelf-wrap"><div class="shelf" id="shelf"></div></div>
+    <p class="note">Classics that are out of copyright. Times are at your current speed. Find thousands more as free EPUBs at <a href="https://standardebooks.org" rel="noopener">Standard Ebooks</a> and <a href="https://www.gutenberg.org" rel="noopener">Project Gutenberg</a>.</p>
+  </section>
+</main>
+
+<!-- ============ choose a speed (first visit) ============ -->
+<section id="v-speed" class="page" hidden>
+  <header class="top">
+    <a class="wordmark" href="../" aria-label="Glance home">gl<b>a</b>nce</a>
+  </header>
+  <div class="choose">
+    <h1>How fast do you want to read?</h1>
+    <div class="reticle" id="speed-stage"></div>
+    <div class="choose-row">
+      <div id="speed-dial"></div>
+      <div class="compare" id="speed-compare" aria-live="polite"></div>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="speed-go">Start reading</button>
+      <button class="link" id="speed-test">Not sure? Take the pace test instead. It takes about two minutes.</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ pace test ============ -->
+<section id="v-cal" class="page" hidden>
+  <header class="top">
+    <a class="wordmark" href="../" aria-label="Glance home">gl<b>a</b>nce</a>
+    <button class="btn quiet small" id="cal-close">Close</button>
+  </header>
+
+  <div class="cal" id="cal-intro">
+    <h1>Find a speed you can follow</h1>
+    <p class="lede">You'll read a few short passages, one word at a time, and answer one question about each. After every passage, choose slower or faster. The steps get smaller each time you change direction, so you settle on a speed that feels easy and still lets you catch the details.</p>
+    <p class="lede">Keep your eyes on the red letter. It sits where a word is recognised fastest, so your eyes never have to move.</p>
+    <div class="row">
+      <button class="btn primary" id="cal-go">Start the test</button>
+      <button class="link" id="cal-dial">Use the dial instead</button>
+    </div>
+  </div>
+
+  <div class="cal" id="cal-run" hidden>
+    <div class="cal-meta"><span>Passage <b id="cal-n">1</b> of up to 8</span><span><b class="num" id="cal-wpm">300</b> wpm</span></div>
+    <div class="reticle" id="cal-stage"></div>
+    <div class="panel" id="cal-ask" hidden>
+      <p class="q" id="cal-q"></p>
+      <div class="opts" id="cal-opts"></div>
+    </div>
+    <div class="panel" id="cal-verdict" hidden>
+      <p class="verdict-line" id="cal-result"></p>
+      <p class="hint" id="cal-hint"></p>
+      <div class="row">
+        <button class="btn" id="cal-slower">Slower</button>
+        <button class="btn" id="cal-faster">Faster</button>
+        <button class="btn primary" id="cal-keep">Keep this speed</button>
+      </div>
+      <div><button class="link" id="cal-again">Watch that passage again</button></div>
+    </div>
+  </div>
+
+  <div class="cal" id="cal-done" hidden>
+    <p class="kicker">Your speed</p>
+    <p class="big-num"><span class="num" id="done-wpm">300</span> <small>words a minute</small></p>
+    <div class="compare" id="done-compare"></div>
+    <div class="row"><button class="btn primary" id="done-go">Start reading</button><button class="link" id="done-redo">Take the test again</button></div>
+  </div>
+</section>
+
+<!-- ============ reader ============ -->
+<section id="v-read" class="reader" hidden>
+  <header class="r-top">
+    <button class="btn quiet small" id="r-back" title="Back to your library (Esc)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>Library
+    </button>
+    <div class="r-title"><span id="r-book"></span><span id="r-chap"></span></div>
+    <div class="r-actions">
+      <button class="btn quiet icon" id="r-toc" title="Chapters (C)" aria-label="Chapters" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>
+      </button>
+      <button class="btn quiet icon" id="r-aa" title="Reading settings" aria-label="Reading settings">Aa</button>
+      <button class="btn quiet icon" id="r-fs" title="Full screen (F)" aria-label="Full screen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+      </button>
+    </div>
+  </header>
+  <div class="r-mid" id="r-mid">
+    <div class="reticle" id="r-stage"></div>
+    <div class="r-context" id="r-context"></div>
+  </div>
+  <footer class="r-bot">
+    <div class="prog-wrap">
+      <input class="prog" type="range" id="r-prog" min="0" max="0" value="0" step="1" aria-label="Position in the book">
+      <div class="prog-marks" id="r-marks" aria-hidden="true"></div>
+    </div>
+    <div class="r-ctrl">
+      <div class="r-where"><span id="r-pct"></span><span id="r-left"></span></div>
+      <div class="r-play">
+        <button class="btn quiet icon" id="r-prev" title="Back a sentence (←)" aria-label="Back a sentence">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 6l-6 6 6 6M19 6l-6 6 6 6"/></svg>
+        </button>
+        <button class="btn primary play" id="r-toggle" title="Play or pause (Space)" aria-label="Play"></button>
+        <button class="btn quiet icon" id="r-next" title="Forward a sentence (→)" aria-label="Forward a sentence">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 6l6 6-6 6M5 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+      <div class="r-speed">
+        <button class="btn quiet icon" id="r-slower" title="Slower (↓)" aria-label="Slower">−</button>
+        <button class="speed-val" id="r-speed" title="Turn the speed dial (S)"><span class="num" id="r-wpm">350</span><span class="unit">wpm</span></button>
+        <button class="btn quiet icon" id="r-faster" title="Faster (↑)" aria-label="Faster">+</button>
+      </div>
+    </div>
+  </footer>
+</section>
+
+<!-- ============ speed dial sheet ============ -->
+<div class="sheet clear" id="speed" hidden>
+  <div class="sheet-card speed-card" role="dialog" aria-modal="false" aria-labelledby="speed-h">
+    <header><h2 id="speed-h">Reading speed</h2><button class="btn quiet small" id="speed-close">Done</button></header>
+    <div class="choose-row">
+      <div id="sheet-dial"></div>
+      <div class="compare" id="sheet-compare" aria-live="polite"></div>
+    </div>
+    <div class="row">
+      <button class="btn small" id="sheet-save" hidden></button>
+      <button class="link" id="sheet-test">Take the pace test</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ chapters ============ -->
+<div class="sheet" id="toc" hidden>
+  <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="toc-h">
+    <header><h2 id="toc-h">Chapters</h2><button class="btn quiet small" id="toc-close">Close</button></header>
+    <ol class="toc" id="toc-list"></ol>
+  </div>
+</div>
+
+<!-- ============ settings ============ -->
+<div class="sheet" id="settings" hidden>
+  <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="set-h">
+    <header><h2 id="set-h">Reading settings</h2><button class="btn quiet small" id="set-close">Done</button></header>
+    <div class="field"><span>Typeface</span><div class="seg" id="seg-font">
+      <button data-v="atkinson" style="font-family:'Atkinson Hyperlegible Next',sans-serif">Atkinson</button>
+      <button data-v="literata" style="font-family:Literata,Georgia,serif">Literata</button>
+      <button data-v="lexend" style="font-family:Lexend,sans-serif">Lexend</button>
+      <button data-v="mono" style="font-family:'Atkinson Hyperlegible Mono',monospace">Mono</button>
+    </div></div>
+    <div class="field"><span>Word size</span><div class="seg" id="seg-size">
+      <button data-v="s">Small</button><button data-v="m">Medium</button><button data-v="l">Large</button>
+    </div></div>
+    <div class="field"><span>Background</span><div class="seg" id="seg-theme">
+      <button data-v="system">Match device</button><button data-v="light">Light</button><button data-v="dark">Dark</button>
+    </div></div>
+    <label class="check"><input type="checkbox" id="set-pauses"> <span>Linger a little at commas, full stops and new paragraphs. It gives you a moment to blink and take in the sentence.</span></label>
+    <div class="field"><span>Usual speed</span>
+      <div class="row"><span id="set-pace"></span><button class="link" id="set-speed">Change it</button></div>
+    </div>
+    <div class="field" id="install-field" hidden><span>App</span>
+      <div class="row"><button class="btn small" id="install">Install Glance</button><span class="hint">It works offline once installed.</span></div>
+    </div>
+    <div class="field keys"><span>Keyboard</span>
+      <dl>
+        <dt>Space</dt><dd>Play or pause</dd>
+        <dt>← →</dt><dd>Back or forward a sentence</dd>
+        <dt>↑ ↓</dt><dd>Faster or slower</dd>
+        <dt>S</dt><dd>Speed dial</dd>
+        <dt>C</dt><dd>Chapters</dd>
+        <dt>F</dt><dd>Full screen</dd>
+      </dl>
+    </div>
+  </div>
+</div>
+
+<!-- ============ paste ============ -->
+<div class="sheet" id="paste" hidden>
+  <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="paste-h">
+    <header><h2 id="paste-h">Paste text</h2><button class="btn quiet small" id="paste-close">Cancel</button></header>
+    <label class="field"><span>Title</span><input class="input" id="paste-title" placeholder="Untitled"></label>
+    <label class="field"><span>Text</span><textarea class="area" id="paste-text" placeholder="Paste a chapter, an article or a whole book."></textarea></label>
+    <div class="row"><button class="btn primary" id="paste-add">Add and read</button></div>
+  </div>
+</div>
+
+</body>
+</html>

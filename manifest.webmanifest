@@ -1,0 +1,15 @@
+{
+  "name": "Glance",
+  "short_name": "Glance",
+  "description": "Read any book one word at a time, lined up on a red focus letter.",
+  "start_url": "read/",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f1f2ef",
+  "theme_color": "#f1f2ef",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "assets/icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

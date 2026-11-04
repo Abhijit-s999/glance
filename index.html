@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Glance: read faster without moving your eyes</title>
+<meta name="description" content="Glance shows a book one word at a time, lined up on a red focus letter, so your eyes stay still and you can read faster. Free, private, and it works offline.">
+<meta name="theme-color" content="#f1f2ef" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141618" media="(prefers-color-scheme: dark)">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Glance: read faster without moving your eyes">
+<meta property="og:description" content="A free speed reader that shows a book one word at a time, lined up on a red focus letter.">
+<meta property="og:url" content="https://abhijit-s999.github.io/glance/">
+<meta property="og:image" content="https://abhijit-s999.github.io/glance/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://abhijit-s999.github.io/glance/">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="preload" href="assets/fonts/atkinson-hyperlegible-next-latin-066569.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/glance.css">
+<link rel="stylesheet" href="assets/site.css">
+<script defer src="assets/core.js"></script>
+<script defer src="assets/site.js"></script>
+</head>
+<body>
+
+<header class="nav wrap">
+  <a class="wordmark" href="./" aria-label="Glance">gl<b>a</b>nce</a>
+  <nav aria-label="Sections">
+    <a href="#how">How it works</a>
+    <a href="#speed">Speed</a>
+    <a href="#research">Research</a>
+    <a href="#books">Free books</a>
+    <a href="https://github.com/Abhijit-s999/glance" rel="noopener">GitHub</a>
+  </nav>
+  <a class="btn primary small" href="read/">Open the reader</a>
+</header>
+
+<main>
+<section class="hero" aria-labelledby="hero-h">
+  <div class="wrap hero-copy">
+    <h1 id="hero-h">Read faster without moving your eyes.</h1>
+    <div class="hero-side">
+      <p>Glance shows a book one word at a time, each word lined up on a red focus letter. Your eyes stay in one place while the words come to you, at whatever speed you set.</p>
+      <div class="row">
+        <a class="btn primary" href="read/">Open the reader</a>
+        <a class="link" href="read/?test">Take the pace test</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-band">
+    <div class="reticle" id="hero-stage" aria-label="A live demo of Glance reading a short passage"></div>
+  </div>
+
+  <div class="wrap hero-controls">
+    <div id="hero-dial"></div>
+    <div class="compare" id="hero-compare" aria-live="polite"></div>
+    <button class="btn icon play-btn" id="hero-play" aria-label="Pause the demo"></button>
+  </div>
+</section>
+
+<section class="sec" id="how" aria-labelledby="how-h">
+  <div class="wrap split">
+    <div class="copy">
+      <h2 id="how-h">On a printed page, your eyes are always jumping.</h2>
+      <p>Your eyes don't glide along a line of text. They stop on a word for about a quarter of a second, jump to the next stop, and every so often jump back to check something they missed.<a class="ref" href="#ref-1">1</a> While they're moving, you aren't taking anything in.</p>
+    </div>
+    <figure class="scan" id="scan">
+      <div class="scan-body">
+        <p class="scan-text" id="scan-text">When you read a page, your eyes stop on a word, take it in and jump to the next stop. Now and then they go back to check something they missed.</p>
+        <svg class="scan-svg" id="scan-svg" aria-hidden="true"></svg>
+      </div>
+      <figcaption>
+        <span>Each circle is a stop, sized by how long the eyes rest there. The dashed line is a jump back.</span>
+        <button class="link" id="scan-play">Play it at real speed</button>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="wrap split">
+    <div class="copy">
+      <h2>Glance moves the words to you instead.</h2>
+      <p>Each word is placed so that one letter, a little left of its middle, lands in the same spot every time. That's close to where studies find a word is recognised fastest.<a class="ref" href="#ref-2">2</a> Your eyes rest there while the book goes by.</p>
+      <table class="rule-table">
+        <caption class="sr">Which letter Glance lines up, by word length</caption>
+        <thead><tr><th scope="col">Word length</th><th scope="col">Focus letter</th></tr></thead>
+        <tbody>
+          <tr><td>1 letter</td><td>1st</td></tr>
+          <tr><td>2 to 5</td><td>2nd</td></tr>
+          <tr><td>6 to 9</td><td>3rd</td></tr>
+          <tr><td>10 to 13</td><td>4th</td></tr>
+          <tr><td>14 or more</td><td>5th</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <figure class="spec" aria-label="Words of different lengths lined up on their focus letters">
+      <span class="tick t"></span><span class="tick b"></span>
+      <div class="spec-rows" id="spec"></div>
+    </figure>
+  </div>
+
+  <div class="wrap split">
+    <div class="copy">
+      <h2>Spin the dial, or let a quick test choose.</h2>
+      <p>Pick a speed with the dial and start reading. If you'd rather not guess, the pace test plays short passages and asks one question after each. It nudges you faster when you're keeping up and slower when you miss things, with smaller steps each time, until you settle on a speed you can follow.</p>
+      <p>You can change speed at any point while you read, and pause to see the whole paragraph with your place underlined.</p>
+    </div>
+    <figure class="testrun">
+      <svg id="testrun" viewBox="0 0 560 280" role="img" aria-labelledby="testrun-t testrun-d">
+        <title id="testrun-t">An example pace test</title>
+        <desc id="testrun-d">Four passages. The speed rises from 300 to 420 words a minute, a question is missed at 420, and the test settles at 390.</desc>
+      </svg>
+      <figcaption>An example pace test. Filled dots are questions answered correctly, the open dot is a miss.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="sec" id="speed" aria-labelledby="speed-h">
+  <div class="wrap">
+    <div class="copy wide">
+      <h2 id="speed-h">The same books in a lot less time.</h2>
+      <p>The average adult reads about 238 words a minute in non-fiction and 260 in fiction.<a class="ref" href="#ref-3">3</a> Here's how long the free books on Glance take at a typical 250, and at the speed on your dial.</p>
+    </div>
+    <div class="chart-head">
+      <div class="legend">
+        <span><i class="sw normal"></i>Reading normally, 250 wpm</span>
+        <span><i class="sw glance"></i>Glance at <b id="leg-wpm">400</b> wpm</span>
+      </div>
+      <div class="stepper" role="group" aria-label="Your speed">
+        <button class="btn small icon" id="step-down" aria-label="Slower">−</button>
+        <span class="stepper-val"><b id="step-val">400</b> wpm</span>
+        <button class="btn small icon" id="step-up" aria-label="Faster">+</button>
+      </div>
+    </div>
+    <div class="chart" id="chart"></div>
+    <div class="axis" id="axis" aria-hidden="true"></div>
+    <details class="table-view">
+      <summary>Show these numbers as a table</summary>
+      <div class="table-scroll"><table id="chart-table"></table></div>
+    </details>
+
+    <div class="year">
+      <p class="year-lede">Twenty minutes a day for a year</p>
+      <div class="year-nums">
+        <div><span class="year-n" id="year-normal">20</span><span class="year-l">novels at a typical pace</span></div>
+        <div><span class="year-n ink" id="year-glance">32</span><span class="year-l">novels at <span id="year-wpm">400</span> wpm</span></div>
+      </div>
+      <p class="fine">Counting a novel as 90,000 words. All ten books together take <span id="all-normal"></span> at a typical pace and <span id="all-glance"></span> with Glance.</p>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="research" aria-labelledby="research-h">
+  <div class="wrap split">
+    <div class="copy">
+      <h2 id="research-h">What the research says, including the catch.</h2>
+      <p>Showing words one at a time is a well-studied idea, usually called rapid serial visual presentation. It has real limits, and Glance is built around them.</p>
+    </div>
+    <div class="findings">
+      <article>
+        <h3>Looking back helps you understand.</h3>
+        <p>Readers who can't glance back at earlier words understand less of what they read.<a class="ref" href="#ref-4">4</a></p>
+        <p class="answer"><b>In Glance</b>, pause at any moment and the paragraph you're in appears, with your place underlined. Click any word to carry on from there.</p>
+      </article>
+      <article>
+        <h3>You blink less.</h3>
+        <p>A study of the Spritz app found people blinked far less and reported more tired eyes.<a class="ref" href="#ref-5">5</a></p>
+        <p class="answer"><b>In Glance</b>, the words linger a little at commas, full stops and new paragraphs, which leaves natural moments to blink.</p>
+      </article>
+      <article>
+        <h3>Faster isn't always better.</h3>
+        <p>In follow-up work, understanding started to slip above about 250 words a minute.<a class="ref" href="#ref-6">6</a> Some people can go well past that, and some can't.</p>
+        <p class="answer"><b>In Glance</b>, the pace test asks a question after every passage, so the speed you keep is one you can actually follow. For dense or difficult books, turn the dial down.</p>
+      </article>
+    </div>
+  </div>
+  <div class="wrap">
+    <ol class="refs">
+      <li id="ref-1">Rayner, K. (1998). Eye movements in reading and information processing: 20 years of research. <i>Psychological Bulletin</i>, 124(3), 372–422. <a href="https://doi.org/10.1037/0033-2909.124.3.372" rel="noopener">doi:10.1037/0033-2909.124.3.372</a></li>
+      <li id="ref-2">O'Regan, J. K., &amp; Jacobs, A. M. (1992). Optimal viewing position effect in word recognition: A challenge to current theory. <i>Journal of Experimental Psychology: Human Perception and Performance</i>, 18(1), 185–197. <a href="https://doi.org/10.1037/0096-1523.18.1.185" rel="noopener">doi:10.1037/0096-1523.18.1.185</a></li>
+      <li id="ref-3">Brysbaert, M. (2019). How many words do we read per minute? A review and meta-analysis of reading rate. <i>Journal of Memory and Language</i>, 109, 104047. <a href="https://doi.org/10.1016/j.jml.2019.104047" rel="noopener">doi:10.1016/j.jml.2019.104047</a></li>
+      <li id="ref-4">Schotter, E. R., Tran, R., &amp; Rayner, K. (2014). Don't believe what you read (only once): Comprehension is supported by regressions during reading. <i>Psychological Science</i>, 25(6), 1218–1226. <a href="https://doi.org/10.1177/0956797614531148" rel="noopener">doi:10.1177/0956797614531148</a></li>
+      <li id="ref-5">Benedetto, S., Carbone, A., Pedrotti, M., Le Fevre, K., Amel Yahia Bey, L., &amp; Baccino, T. (2015). Rapid serial visual presentation in reading: The case of Spritz. <i>Computers in Human Behavior</i>, 45, 352–358. <a href="https://doi.org/10.1016/j.chb.2014.12.043" rel="noopener">doi:10.1016/j.chb.2014.12.043</a></li>
+      <li id="ref-6">Ricciardi, O., &amp; Di Nocera, F. (2017). Not so fast: A reply to Benedetto et al. (2015). <i>Computers in Human Behavior</i>, 69, 381–385. <a href="https://dblp.org/search?q=Not+so+fast+A+reply+to+Benedetto" rel="noopener">Find it on dblp</a></li>
+    </ol>
+  </div>
+</section>
+
+<section class="sec" id="books" aria-labelledby="books-h">
+  <div class="wrap">
+    <div class="copy wide">
+      <h2 id="books-h">Ten free books to start with.</h2>
+      <p>Classics that are out of copyright, ready to read. Or bring your own: Glance opens text files, EPUBs and PDFs right in your browser. Spines are as wide as the book is long, and times are at the speed on your dial.</p>
+    </div>
+    <div class="shelf-wrap"><div class="shelf" id="shelf"></div></div>
+  </div>
+</section>
+
+<section class="sec private" aria-label="Privacy and offline use">
+  <div class="wrap two">
+    <div>
+      <h2>Your books stay with you.</h2>
+      <p>Files are opened in your browser and kept there. There's no account, no upload and no tracking. Even the fonts are served from this site, so nothing about what you read goes anywhere else.</p>
+    </div>
+    <div>
+      <h2>It works offline.</h2>
+      <p>After your first visit the reader keeps working without a connection. Add it to your home screen and it opens like an app, ready on a train or a plane.</p>
+    </div>
+  </div>
+  <div class="wrap closer">
+    <a class="btn primary" href="read/">Open the reader</a>
+  </div>
+</section>
+</main>
+
+<footer class="foot wrap">
+  <a class="wordmark" href="./" aria-label="Glance">gl<b>a</b>nce</a>
+  <p>Open source under the MIT licence. <a href="https://github.com/Abhijit-s999/glance" rel="noopener">The code is on GitHub</a>.</p>
+  <p>Set in Atkinson Hyperlegible Next, a typeface the Braille Institute designed to keep letters from being mistaken for each other. The free books are public-domain texts transcribed by volunteers at <a href="https://www.gutenberg.org" rel="noopener">Project Gutenberg</a>.</p>
+</footer>
+
+<div class="tip" id="tip" role="tooltip" hidden></div>
+</body>
+</html>

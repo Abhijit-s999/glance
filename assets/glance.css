@@ -1,0 +1,173 @@
+/* Glance — shared tokens and components (reticle, dial, shelf, buttons).
+   Identity: an instrument for the eye. Paper, ink and one signal red that only ever marks
+   the focus point. The only rules on the page are the reticle's; everything else is spacing. */
+@import url("fonts/fonts.css");
+
+:root {
+  --bg: #f1f2ef;          /* paper */
+  --raise: #fafbf9;       /* raised paper: sheets, inputs */
+  --ink: #17191c;
+  --mute: #5b6168;        /* graphite */
+  --faint: #8c9298;       /* chart: reading normally */
+  --rule: #d4d7d2;
+  --focus: #d4291b;       /* signal red: the focus letter, and nothing decorative */
+  --focus-soft: rgba(212, 41, 27, .10);
+  --shade: rgba(20, 22, 25, .36);
+  --tone-0: #26292d; --tone-0-ink: #f1f2ef;
+  --tone-1: #c9ccc6; --tone-1-ink: #17191c;
+  --tone-2: #5b6168; --tone-2-ink: #f1f2ef;
+  --tone-3: #e3e5e0; --tone-3-ink: #17191c;
+
+  --sans: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "Atkinson Hyperlegible Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-read: var(--sans);
+  --read-weight: 500;
+  --read-size: clamp(36px, 10vw, 64px);
+  --px: 42%;
+  --radius: 6px;
+  --gutter: max(16px, env(safe-area-inset-left, 0px));
+  --gutter-r: max(16px, env(safe-area-inset-right, 0px));
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141618; --raise: #1c1f22; --ink: #e8e9e6; --mute: #979da4; --faint: #646a71; --rule: #2e3236;
+    --focus: #ff5a48; --focus-soft: rgba(255, 90, 72, .14); --shade: rgba(0, 0, 0, .55);
+    --tone-0: #e2e3df; --tone-0-ink: #141618;
+    --tone-1: #3a3e43; --tone-1-ink: #e8e9e6;
+    --tone-2: #9aa0a6; --tone-2-ink: #141618;
+    --tone-3: #25282c; --tone-3-ink: #e8e9e6;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141618; --raise: #1c1f22; --ink: #e8e9e6; --mute: #979da4; --faint: #646a71; --rule: #2e3236;
+  --focus: #ff5a48; --focus-soft: rgba(255, 90, 72, .14); --shade: rgba(0, 0, 0, .55);
+  --tone-0: #e2e3df; --tone-0-ink: #141618;
+  --tone-1: #3a3e43; --tone-1-ink: #e8e9e6;
+  --tone-2: #9aa0a6; --tone-2-ink: #141618;
+  --tone-3: #25282c; --tone-3-ink: #e8e9e6;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 400 17px/1.55 var(--sans);
+  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+}
+[hidden] { display: none !important; }
+button, input, textarea, select { font: inherit; color: inherit; }
+h1, h2, h3 { margin: 0; text-wrap: balance; font-weight: 800; letter-spacing: -0.025em; line-height: 1.04; }
+p { margin: 0; text-wrap: pretty; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-radius: 3px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- wordmark: the name set as a Glance word, focus letter and all ---------- */
+.wordmark { font: 800 24px/1 var(--sans); letter-spacing: -0.03em; text-decoration: none; color: var(--ink); }
+.wordmark b { color: var(--focus); font-weight: 800; }
+
+/* ---------- buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font: 500 16px/1 var(--sans); padding: 0 18px; min-height: 46px;
+  border-radius: var(--radius); border: 1px solid var(--rule); background: var(--raise); color: var(--ink);
+  cursor: pointer; white-space: nowrap; text-decoration: none;
+  transition: border-color .15s ease, opacity .15s ease, transform .1s ease;
+}
+.btn:hover { border-color: var(--mute); }
+.btn:active { transform: translateY(1px); }
+.btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.btn.primary:hover { opacity: .86; }
+.btn.quiet { background: transparent; border-color: transparent; color: var(--mute); }
+.btn.quiet:hover { color: var(--ink); border-color: var(--rule); }
+.btn.icon { padding: 0; width: 46px; }
+.btn.small { min-height: 38px; padding: 0 12px; font-size: 15px; }
+.btn svg { width: 20px; height: 20px; flex: none; }
+.link {
+  background: none; border: 0; padding: 4px 0; cursor: pointer; color: var(--mute); font: inherit; text-align: left;
+  text-decoration: underline; text-underline-offset: 4px; text-decoration-color: var(--rule); text-decoration-thickness: 1px;
+}
+.link:hover { color: var(--ink); text-decoration-color: currentColor; }
+
+/* ---------- reticle: the reading window ---------- */
+.reticle { position: relative; width: 100%; height: calc(var(--read-size) * 2.3); user-select: none; -webkit-user-select: none; }
+.reticle::before, .reticle::after { content: ""; position: absolute; left: 0; right: 0; height: 1px; background: var(--rule); }
+.reticle::before { top: 0; }
+.reticle::after { bottom: 0; }
+.tick { position: absolute; left: var(--px); width: 2px; height: 12px; background: var(--mute); transform: translateX(-50%); }
+.tick.t { top: 0; } .tick.b { bottom: 0; }
+.word {
+  position: absolute; inset: 0; overflow: hidden;
+  font-family: var(--font-read); font-weight: var(--read-weight); font-size: var(--read-size); line-height: 1;
+}
+.pv { position: absolute; left: var(--px); top: 50%; transform: translate(-50%, -50%); white-space: pre; color: var(--focus); }
+.lt, .rt { position: absolute; top: 0; white-space: pre; color: var(--ink); }
+.lt { right: 100%; }
+.rt { left: 100%; }
+
+/* ---------- dial: a drum you spin ---------- */
+.dial {
+  position: relative; width: 176px; height: calc(var(--row, 40px) * 5.6); flex: none;
+  perspective: 700px; touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 26%, #000 74%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 26%, #000 74%, transparent 100%);
+  border-radius: var(--radius);
+}
+.dial.grabbing { cursor: grabbing; }
+.dial:focus-visible { outline-offset: 0; -webkit-mask-image: none; mask-image: none; }
+.dial-drum { position: absolute; inset: 0; transform-style: preserve-3d; transform: translateZ(calc(var(--R) * -1)); }
+.dial-item {
+  position: absolute; left: 0; right: 64px; top: 50%; height: var(--row); line-height: var(--row);
+  text-align: right; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  font: 500 27px/var(--row) var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; color: var(--mute);
+}
+.dial-item.on { color: var(--ink); }
+.dial-band {
+  position: absolute; left: 0; right: 0; top: 50%; height: calc(var(--row) + 6px); transform: translateY(-50%);
+  border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); pointer-events: none;
+}
+.dial-unit { position: absolute; left: calc(100% - 56px); top: 50%; transform: translateY(-50%); font-size: 15px; color: var(--mute); }
+
+/* ---------- shelf: free books, spine width = length ---------- */
+.shelf-wrap { overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; scrollbar-color: var(--rule) transparent; padding-top: 14px; }
+.shelf { display: flex; align-items: flex-end; gap: 3px; min-width: min-content; padding-bottom: 0; border-bottom: 6px solid var(--ink); }
+.spine {
+  --w: 56px;
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+  width: var(--w); height: 260px; padding: 12px 0 10px; border: 0; border-radius: 3px 3px 0 0; cursor: pointer;
+  text-decoration: none; font: inherit; transition: transform .18s cubic-bezier(.2, .8, .3, 1);
+}
+.spine:hover, .spine:focus-visible { transform: translateY(-12px); }
+.spine:focus-visible { outline-offset: 2px; }
+.tone-0 { background: var(--tone-0); color: var(--tone-0-ink); }
+.tone-1 { background: var(--tone-1); color: var(--tone-1-ink); }
+.tone-2 { background: var(--tone-2); color: var(--tone-2-ink); }
+.tone-3 { background: var(--tone-3); color: var(--tone-3-ink); box-shadow: inset 0 0 0 1px var(--rule); }
+.spine-title, .spine-author { writing-mode: vertical-rl; text-orientation: mixed; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.spine-title { font: 700 15px/1.1 var(--sans); letter-spacing: -0.01em; max-height: 190px; }
+.spine-author { font: 400 12px/1.1 var(--sans); opacity: .75; max-height: 40px; margin-top: 8px; flex: 1; }
+.spine-time { font: 500 11px/1 var(--mono); opacity: .85; margin-top: 8px; }
+.spine.owned::after { content: ""; position: absolute; top: 0; left: 50%; width: 8px; height: 18px; background: var(--focus); transform: translateX(-50%); border-radius: 0 0 2px 2px; }
+
+/* ---------- sheets ---------- */
+.sheet { position: fixed; inset: 0; z-index: 30; background: var(--shade); display: grid; place-items: end center; }
+@media (min-width: 640px) { .sheet { place-items: center; } }
+.sheet-card {
+  width: min(520px, 100%); max-height: 92vh; overflow: auto;
+  background: var(--raise); border: 1px solid var(--rule); border-radius: 12px 12px 0 0;
+  padding-block: 22px calc(22px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 22px;
+  animation: rise .22s cubic-bezier(.2, .8, .3, 1);
+}
+@media (min-width: 640px) { .sheet-card { border-radius: 12px; padding-bottom: 22px; } }
+@keyframes rise { from { transform: translateY(16px); opacity: 0; } }
+.sheet-card header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.sheet-card h2 { font-size: 21px; letter-spacing: -0.015em; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
