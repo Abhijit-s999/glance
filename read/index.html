@@ -203,19 +203,37 @@
 <div class="sheet" id="settings" hidden>
   <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="set-h">
     <header><h2 id="set-h">Reading settings</h2><button class="btn quiet small" id="set-close">Done</button></header>
+    <div class="field">
+      <div class="field-head"><label for="set-size">Word size</label><output id="size-out" for="set-size">100%</output></div>
+      <div class="slider-row">
+        <button class="btn small icon" id="size-down" aria-label="Smaller words">A−</button>
+        <input type="range" class="range" id="set-size" min="50" max="400" step="5" value="100">
+        <button class="btn small icon" id="size-up" aria-label="Larger words">A+</button>
+      </div>
+      <p class="hint">You can also pinch the word on a touch screen, or press − and + while reading.</p>
+    </div>
     <div class="field"><span>Typeface</span><div class="seg" id="seg-font">
       <button data-v="atkinson" style="font-family:'Atkinson Hyperlegible Next',sans-serif">Atkinson</button>
       <button data-v="literata" style="font-family:Literata,Georgia,serif">Literata</button>
       <button data-v="lexend" style="font-family:Lexend,sans-serif">Lexend</button>
       <button data-v="mono" style="font-family:'Atkinson Hyperlegible Mono',monospace">Mono</button>
     </div></div>
-    <div class="field"><span>Word size</span><div class="seg" id="seg-size">
-      <button data-v="s">Small</button><button data-v="m">Medium</button><button data-v="l">Large</button>
-    </div></div>
     <div class="field"><span>Background</span><div class="seg" id="seg-theme">
       <button data-v="system">Match device</button><button data-v="light">Light</button><button data-v="dark">Dark</button>
     </div></div>
-    <label class="check"><input type="checkbox" id="set-pauses"> <span>Linger a little at commas, full stops and new paragraphs. It gives you a moment to blink and take in the sentence.</span></label>
+    <div class="field">
+      <div class="field-head"><label for="set-weight">Time for long words</label><output id="weight-out" for="set-weight"></output></div>
+      <input type="range" class="range" id="set-weight" min="0" max="100" step="5" value="100">
+      <div class="scale-ends"><span>Same for every word</span><span>In proportion to length</span></div>
+      <p class="hint" id="weight-eg"></p>
+    </div>
+    <fieldset class="field pauses">
+      <legend>Pauses</legend>
+      <p class="hint">Pauses stay the same length at every speed, so you always get a moment to blink. Set one to 0 to skip it.</p>
+      <div class="pause-row"><label for="p-comma">Commas and dashes</label><input type="range" class="range" id="p-comma" min="0" max="1000" step="10"><output id="p-comma-out" for="p-comma"></output></div>
+      <div class="pause-row"><label for="p-sentence">End of a sentence</label><input type="range" class="range" id="p-sentence" min="0" max="1000" step="10"><output id="p-sentence-out" for="p-sentence"></output></div>
+      <div class="pause-row"><label for="p-para">New paragraph</label><input type="range" class="range" id="p-para" min="0" max="1500" step="10"><output id="p-para-out" for="p-para"></output></div>
+    </fieldset>
     <div class="field"><span>Usual speed</span>
       <div class="row"><span id="set-pace"></span><button class="link" id="set-speed">Change it</button></div>
     </div>
@@ -229,6 +247,7 @@
         <dt>↑ ↓</dt><dd>Faster or slower</dd>
         <dt>S</dt><dd>Speed dial</dd>
         <dt>C</dt><dd>Chapters</dd>
+        <dt>− +</dt><dd>Smaller or larger words</dd>
         <dt>F</dt><dd>Full screen</dd>
       </dl>
     </div>

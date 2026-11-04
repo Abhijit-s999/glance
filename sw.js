@@ -1,6 +1,6 @@
 /* Glance service worker: makes the site and reader work offline.
    Bump VERSION whenever you deploy so visitors pick up the new files. */
-const VERSION = 'glance-2026-11-04-1';
+const VERSION = 'glance-2026-11-04-2';
 const CORE = [
   './', 'index.html', 'read/', 'read/index.html', '404.html', 'manifest.webmanifest',
   'assets/glance.css', 'assets/site.css', 'assets/app.css',

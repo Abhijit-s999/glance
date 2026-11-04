@@ -6,12 +6,17 @@ const $ = (s, r = document) => r.querySelector(s);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 
 /* ================= settings and stats ================= */
-const DEFAULTS = { wpm: 350, chosen: false, calibrated: 0, font: 'atkinson', size: 'm', theme: 'system', pauses: true };
+const DEFAULTS = { wpm: 350, chosen: false, calibrated: 0, font: 'atkinson', theme: 'system', scale: 1,
+  weight: G.DEFAULT_TIMING.weight, pauseComma: G.DEFAULT_TIMING.comma, pauseSentence: G.DEFAULT_TIMING.sentence, pausePara: G.DEFAULT_TIMING.para };
 const settings = Object.assign({}, DEFAULTS, G.store.get('glance:settings', {}));
+// older versions stored small/medium/large and a pauses on/off switch
+if (settings.size) { settings.scale = { s: 0.8, m: 1, l: 1.25 }[settings.size] || 1; delete settings.size; }
+if (settings.pauses === false) { settings.pauseComma = settings.pauseSentence = settings.pausePara = 0; }
+delete settings.pauses;
 const saveSettings = () => G.store.set('glance:settings', settings);
 const stats = Object.assign({ words: 0, ms: 0 }, G.store.get('glance:stats', {}));
 const saveStats = () => G.store.set('glance:stats', stats);
-const pauses = () => settings.pauses;
+const timing = () => ({ weight: settings.weight, comma: settings.pauseComma, sentence: settings.pauseSentence, para: settings.pausePara });
 
 /* ================= storage: IndexedDB, with an in-memory fallback ================= */
 const DB = (() => {
@@ -70,11 +75,10 @@ const FONTS = {
   lexend: ['Lexend, system-ui, sans-serif', 400],
   mono: ['"Atkinson Hyperlegible Mono", ui-monospace, Menlo, monospace', 500],
 };
-const SIZES = { s: 'clamp(30px, 8vw, 50px)', m: 'clamp(36px, 10vw, 64px)', l: 'clamp(44px, 12vw, 80px)' };
 function applyLook() {
   const root = document.documentElement, f = FONTS[settings.font] || FONTS.atkinson;
   root.style.setProperty('--font-read', f[0]); root.style.setProperty('--read-weight', f[1]);
-  root.style.setProperty('--read-size', SIZES[settings.size] || SIZES.m);
+  root.style.setProperty('--read-scale', String(settings.scale));
   if (settings.theme === 'light' || settings.theme === 'dark') root.setAttribute('data-theme', settings.theme);
   else root.removeAttribute('data-theme');
   requestAnimationFrame(refit);
@@ -83,20 +87,19 @@ function refit() { for (const f of [Reader.fl, Cal.fl, Choose.fl]) f && f.fit();
 
 /* ================= comparisons: Glance vs reading normally ================= */
 let catalog = [];
-const refBook = () => catalog.find(b => b.id === 'the-great-gatsby') || { title: 'The Great Gatsby', words: 48127 };
+// A reference text to compare against: words, and how long Glance takes at a word speed (pauses included).
+const fromEntry = e => ({ title: e.title, words: e.words, glance: w => G.estimate(e, w, timing()) });
+const refBook = () => fromEntry(catalog.find(b => b.id === 'the-great-gatsby') || { title: 'The Great Gatsby', words: 48127 });
 function compare(box, wpm, ref) {
   box.textContent = '';
-  const r = wpm / G.NORMAL_WPM;
-  const big = el('p', 'big', r >= 1.05 ? G.ratio(wpm) + '× faster' : r > 0.95 ? 'A typical speed' : 'Unhurried');
-  const line = el('p', null, r >= 1.05 ? 'than a typical reader, who manages about ' + G.NORMAL_WPM + ' words a minute on a printed page.'
+  const normal = ref.words / G.NORMAL_WPM, mine = ref.glance(wpm), r = normal / mine;
+  const big = el('p', 'big', r >= 1.05 ? (Math.round(r * 10) / 10).toFixed(1).replace(/\.0$/, '') + '× faster' : r > 0.95 ? 'A typical speed' : 'Unhurried');
+  const line = el('p', null, r >= 1.05 ? 'than a typical reader at ' + G.NORMAL_WPM + ' words a minute, counting the pauses.'
     : r > 0.95 ? 'About as fast as most people read a printed page.' : 'A little slower than most people read a printed page, which is good for dense books.');
-  box.append(big, line);
-  if (ref && ref.words > 0) {
-    const p = el('p');
-    const b = el('b', null, ref.title);
-    p.append(ref.prefix || '', b, ' would take ', el('b', null, G.fmtMin(ref.words / wpm)), (r >= 1 ? ' instead of ' : ' compared with ') + G.fmtMin(ref.words / G.NORMAL_WPM) + '.');
-    box.append(p);
-  }
+  const p = el('p');
+  p.append(ref.prefix || '', el('b', null, ref.title), ' would take ', el('b', null, G.fmtMin(mine)), (r >= 1 ? ' instead of ' : ' compared with ') + G.fmtMin(normal) + '.');
+  const overall = el('p', 'overall', 'With pauses, that works out at about ' + Math.round(ref.words / mine) + ' words a minute overall.');
+  box.append(big, line, p, overall);
 }
 
 /* ================= library ================= */
@@ -111,7 +114,7 @@ async function addBook({ title, author = '', kind, paras, catalogId }) {
   if (dupe) return dupe;
   const id = newId(), now = Date.now();
   const words = paras.reduce((s, p) => s + p.split(' ').length, 0);
-  const meta = { id, title, author, kind, catalogId: catalogId || null, words, tokens: tok.words.length, pos: 0, addedAt: now, openedAt: 0 };
+  const meta = { id, title, author, kind, catalogId: catalogId || null, words, tokens: tok.words.length, pauses: G.pauseCounts(tok), pos: 0, addedAt: now, openedAt: 0 };
   await DB.putText({ id, paras });
   await DB.putMeta(meta);
   books.unshift(meta);
@@ -120,6 +123,7 @@ async function addBook({ title, author = '', kind, paras, catalogId }) {
 const frac = b => (b.pos || 0) / Math.max(1, b.tokens - 1);
 const pct = b => Math.floor(100 * frac(b));
 const wordsLeft = b => b.words * (1 - frac(b));
+const minutesLeft = (b, wpm = settings.wpm) => G.estimate(b, wpm, timing(), frac(b));
 
 async function openFree(entry) {
   const have = books.find(b => b.catalogId === entry.id);
@@ -173,7 +177,7 @@ const Home = {
     const add = (bold, rest) => { const s = el('span'); s.append(el('b', null, bold), rest); box.append(s); };
     if (started) add(pct(b) + '%', ' read');
     else add(G.fmtNum(b.words), ' words');
-    add(G.fmtMin(left / settings.wpm), (started ? ' left' : '') + ' at ' + settings.wpm + ' wpm');
+    add(G.fmtMin(minutesLeft(b)), (started ? ' left' : '') + ' at ' + settings.wpm + ' wpm');
     box.append(el('span', null, G.fmtMin(left / G.NORMAL_WPM) + ' reading normally'));
   },
   render() {
@@ -204,7 +208,7 @@ const Home = {
       const facts = el('div', 'facts-row');
       if (b.author) facts.append(el('span', null, b.author));
       facts.append(el('span', null, b.pos ? pct(b) + '% read' : G.fmtNum(b.words) + ' words'));
-      facts.append(el('span', null, G.fmtMin(wordsLeft(b) / settings.wpm) + ' left'));
+      facts.append(el('span', null, G.fmtMin(minutesLeft(b)) + ' left'));
       const acts = el('div', 'acts');
       acts.append(el('button', 'btn quiet small read', 'Read'), el('button', 'btn quiet small rm', 'Remove'));
       const bar = el('div', 'bar'); const i = el('i'); i.style.width = pct(b) + '%'; bar.append(i);
@@ -213,7 +217,7 @@ const Home = {
     $('#lib-count').textContent = books.length === 1 ? '1 book' : books.length + ' books';
     $('#lib-note').hidden = DB.ok;
     $('#free-section').hidden = !catalog.length;
-    if (catalog.length) G.renderShelf($('#shelf'), catalog, { wpm: settings.wpm, onPick: openFree, owned: c => books.some(b => b.catalogId === c.id) });
+    if (catalog.length) G.renderShelf($('#shelf'), catalog, { wpm: settings.wpm, timing: timing(), onPick: openFree, owned: c => books.some(b => b.catalogId === c.id) });
   },
 };
 function status(msg, err) { const s = $('#status'); s.hidden = !msg; s.textContent = msg || ''; s.classList.toggle('err', !!err); if (msg && view !== 'home') go('home'); }
@@ -410,8 +414,9 @@ const Speed = {
   sync() {
     const v = this.dial.value;
     let ref = null;
-    if (this.mode === 'read' && Reader.book) ref = { prefix: 'The rest of ', title: Reader.book.title, words: Math.max(0, Reader.fl.n - Reader.fl.cur) * Reader.book.words / Math.max(1, Reader.fl.n) };
-    else if (books[0]) ref = { title: books[0].title, words: wordsLeft(books[0]) };
+    const fl = Reader.fl;
+    if (this.mode === 'read' && Reader.book) ref = { prefix: 'The rest of ', title: Reader.book.title, words: Math.max(1, fl.n - fl.cur), glance: w => fl.minutesBetween(fl.cur, fl.n, w) };
+    else if (books[0]) ref = { title: books[0].title, words: Math.max(1, wordsLeft(books[0])), glance: w => minutesLeft(books[0], w) };
     else ref = refBook();
     compare($('#sheet-compare'), v, ref);
     const save = $('#sheet-save');
@@ -425,7 +430,7 @@ const PREVIEW = 'This is how your speed feels. Keep your eyes on the red letter 
 const Choose = {
   fl: null, dial: null, loopT: 0, pending: null,
   init() {
-    this.fl = new G.Flasher($('#speed-stage'), { pauses, onEnd: () => { this.loopT = setTimeout(() => this.loop(), 900); } });
+    this.fl = new G.Flasher($('#speed-stage'), { timing, onEnd: () => { this.loopT = setTimeout(() => this.loop(), 900); } });
     this.dial = new G.Dial($('#speed-dial'), { value: settings.wpm, onInput: v => { this.fl.wpm = v; this.sync(); } });
     $('#speed-go').addEventListener('click', () => {
       settings.wpm = this.dial.value; settings.chosen = true; saveSettings();
@@ -451,7 +456,7 @@ const Choose = {
   },
   loop() { if (view !== 'speed') return; this.fl.seek(0); this.fl.play(); },
   stop() { clearTimeout(this.loopT); this.fl && this.fl.pause(true); },
-  sync() { compare($('#speed-compare'), this.dial.value, this.pending || refBook()); },
+  sync() { compare($('#speed-compare'), this.dial.value, this.pending ? fromEntry(this.pending) : refBook()); },
 };
 
 /* ================= the reader ================= */
@@ -461,7 +466,7 @@ const Reader = {
   fl: null, book: null, saveT: 0, ctxPara: -1, wake: null, awakeT: 0, last: -1, playT: 0, chap: -1,
   init() {
     this.fl = new G.Flasher($('#r-stage'), {
-      pauses,
+      timing,
       onWord: (i, playing) => this.onWord(i, playing),
       onState: p => this.onState(p),
       onEnd: () => this.onEnd(),
@@ -477,7 +482,7 @@ const Reader = {
     $('#r-slower').addEventListener('click', () => this.speed(-10));
     $('#r-faster').addEventListener('click', () => this.speed(10));
     $('#r-speed').addEventListener('click', () => Speed.toggle('read'));
-    $('#r-mid').addEventListener('click', e => { if (!e.target.closest('.r-context')) this.fl.toggle(); });
+    $('#r-mid').addEventListener('click', e => { if (!e.target.closest('.r-context') && Date.now() - (this.pinchedAt || 0) > 400) this.fl.toggle(); });
     $('#r-context').addEventListener('click', e => {
       const s = e.target.closest('span[data-i]'); if (s) this.fl.seek(+s.dataset.i);
       if (e.target.closest('#r-again')) this.fl.seek(0);
@@ -504,7 +509,7 @@ const Reader = {
     $('#r-toc').hidden = !tok.chapters.length;
     const marks = $('#r-marks'); marks.textContent = '';
     tok.chapters.slice(1).forEach(c => { const i = el('i'); i.style.left = (100 * c.start / Math.max(1, tok.words.length - 1)) + '%'; marks.append(i); });
-    meta.openedAt = Date.now(); meta.tokens = tok.words.length;
+    meta.openedAt = Date.now(); meta.tokens = tok.words.length; meta.pauses = G.pauseCounts(tok);
     sortBooks();
     DB.putMeta(meta);
     go('read');
@@ -517,7 +522,8 @@ const Reader = {
     this.fl.pause(); this.save(); this.releaseWake();
     views.read.classList.remove('playing'); this.book = null; Speed.close();
   },
-  recost() { if (this.book) { this.fl.recost(); this.where(); } for (const f of [Cal.fl, Choose.fl]) f && f.recost(); },
+  recost() { for (const f of [this.fl, Cal.fl, Choose.fl]) f && f.recost(); if (this.book) this.where(); },
+  size(d) { setScale(settings.scale + d); },
   save() {
     if (!this.book) return;
     this.book.pos = this.fl.cur;
@@ -640,22 +646,46 @@ const Settings = {
       const b = e.target.closest('button[data-v]'); if (!b) return;
       settings[key] = b.dataset.v; saveSettings(); applyLook(); this.sync();
     });
-    seg('#seg-font', 'font'); seg('#seg-size', 'size'); seg('#seg-theme', 'theme');
-    $('#set-pauses').addEventListener('change', e => { settings.pauses = e.target.checked; saveSettings(); Reader.recost(); });
+    seg('#seg-font', 'font'); seg('#seg-theme', 'theme');
+    $('#set-size').addEventListener('input', e => setScale(+e.target.value / 100));
+    $('#size-down').addEventListener('click', () => setScale(settings.scale - 0.1));
+    $('#size-up').addEventListener('click', () => setScale(settings.scale + 0.1));
+    $('#set-weight').addEventListener('input', e => { settings.weight = +e.target.value / 100; saveSettings(); Reader.recost(); this.sync(); });
+    for (const [id, key] of [['#p-comma', 'pauseComma'], ['#p-sentence', 'pauseSentence'], ['#p-para', 'pausePara']])
+      $(id).addEventListener('input', e => { settings[key] = +e.target.value; saveSettings(); Reader.recost(); this.sync(); });
     $('#set-close').addEventListener('click', () => this.close());
     $('#settings').addEventListener('click', e => { if (e.target.id === 'settings') this.close(); });
+    document.addEventListener('pointerdown', e => {
+      if (!$('#settings').hidden && $('#settings').classList.contains('clear') && !e.target.closest('#settings .sheet-card, #r-aa')) this.close();
+    }, true);
     $('#set-speed').addEventListener('click', () => { this.close(); Speed.open(view === 'read' ? 'read' : 'home'); });
     let deferred = null;
     window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferred = e; $('#install-field').hidden = false; });
     $('#install').addEventListener('click', async () => { if (!deferred) return; deferred.prompt(); try { await deferred.userChoice; } catch {} deferred = null; $('#install-field').hidden = true; });
   },
   sync() {
-    for (const [id, key] of [['#seg-font', 'font'], ['#seg-size', 'size'], ['#seg-theme', 'theme']])
+    for (const [id, key] of [['#seg-font', 'font'], ['#seg-theme', 'theme']])
       for (const b of $(id).querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.v === settings[key]));
-    $('#set-pauses').checked = settings.pauses;
+    const range = (id, v, min, max) => { const r = $(id); r.value = v; r.style.setProperty('--fill', (100 * (v - min) / (max - min)) + '%'); };
+    range('#set-size', Math.round(settings.scale * 100), 50, 400);
+    $('#size-out').textContent = Math.round(settings.scale * 100) + '%';
+    range('#set-weight', Math.round(settings.weight * 100), 0, 100);
+    $('#weight-out').textContent = settings.weight <= 0 ? 'Even' : Math.round(settings.weight * 100) + '%';
+    const wpm = view === 'read' && Reader.book ? Reader.fl.wpm : settings.wpm;
+    const probe = Reader.book ? Reader.fl : Choose.fl;
+    const ms = w => Math.round(probe.wordMs(w, wpm));
+    $('#weight-eg').textContent = 'At ' + wpm + ' wpm, “it” shows for ' + ms('it') + ' ms and “discriminative” for ' + ms('discriminative') + ' ms. The average word gets ' + Math.round(60000 / wpm) + ' ms.';
+    for (const [id, key, max] of [['#p-comma', 'pauseComma', 1000], ['#p-sentence', 'pauseSentence', 1000], ['#p-para', 'pausePara', 1500]]) {
+      range(id, settings[key], 0, max);
+      $(id + '-out').textContent = settings[key] ? settings[key] + ' ms' : 'off';
+    }
     $('#set-pace').textContent = settings.wpm + ' words a minute' + (settings.calibrated ? ', from your pace test' : '');
   },
-  open() { Reader.fl && Reader.fl.pause(); this.sync(); $('#settings').hidden = false; $('#set-close').focus(); },
+  open() {
+    Reader.fl && Reader.fl.pause();
+    $('#settings').classList.toggle('clear', view === 'read');   // keep the word visible while you adjust it
+    this.sync(); $('#settings').hidden = false; $('#set-close').focus();
+  },
   close() { $('#settings').hidden = true; },
 };
 
@@ -688,7 +718,7 @@ const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.f
 const Cal = {
   fl: null,
   init() {
-    this.fl = new G.Flasher($('#cal-stage'), { pauses, onEnd: () => setTimeout(() => this.ended(), 350) });
+    this.fl = new G.Flasher($('#cal-stage'), { timing, onEnd: () => setTimeout(() => this.ended(), 350) });
     $('#cal-go').addEventListener('click', () => this.begin());
     $('#cal-dial').addEventListener('click', () => Choose.open());
     $('#cal-close').addEventListener('click', () => { if (!settings.chosen) Choose.open(); else go('home'); });
@@ -760,7 +790,7 @@ const Cal = {
     this.stopAll();
     settings.wpm = Math.round(w / 10) * 10; settings.calibrated = Date.now(); settings.chosen = true; saveSettings();
     $('#done-wpm').textContent = settings.wpm;
-    compare($('#done-compare'), settings.wpm, Choose.pending || refBook());
+    compare($('#done-compare'), settings.wpm, Choose.pending ? fromEntry(Choose.pending) : refBook());
     this.show('cal-done');
     $('#done-go').focus({ preventScroll: true });
   },
@@ -769,11 +799,12 @@ const Cal = {
 /* ================= keyboard ================= */
 document.addEventListener('keydown', e => {
   if (e.target.closest && e.target.closest('input, textarea, .dial')) return;
-  if (!$('#settings').hidden || !$('#paste').hidden || !$('#toc').hidden) {
+  if ((!$('#settings').hidden && !$('#settings').classList.contains('clear')) || !$('#paste').hidden || !$('#toc').hidden) {
     if (e.key === 'Escape') { Settings.close(); Toc.close(); $('#paste').hidden = true; }
     return;
   }
   if (!$('#speed').hidden && e.key === 'Escape') { Speed.close(); return; }
+  if (!$('#settings').hidden && e.key === 'Escape') { Settings.close(); return; }
   if (view !== 'read' || e.metaKey || e.ctrlKey || e.altKey) return;
   const fl = Reader.fl;
   switch (e.key) {
@@ -788,12 +819,36 @@ document.addEventListener('keydown', e => {
     case 'ArrowUp': Reader.speed(10); e.preventDefault(); break;
     case 'ArrowDown': Reader.speed(-10); e.preventDefault(); break;
     case 's': case 'S': Speed.toggle('read'); break;
+    case '-': case '_': Reader.size(-0.1); break;
+    case '=': case '+': Reader.size(0.1); break;
     case 'c': case 'C': Toc.open(); break;
     case 'f': case 'F': Reader.fullscreen(); break;
     case 'Escape': if (fl.playing) fl.pause(); else go('home'); break;
   }
 });
 window.addEventListener('resize', refit);
+
+/* ================= word size: slider, keys, pinch, ctrl+scroll ================= */
+function setScale(v) {
+  settings.scale = Math.round(Math.max(0.5, Math.min(4, v)) * 100) / 100;
+  saveSettings(); applyLook();
+  if (!$('#settings').hidden) Settings.sync();
+}
+(function pinch() {
+  const mid = $('#r-mid'); let start = null;
+  const dist = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+  mid.addEventListener('touchstart', e => { if (e.touches.length === 2) start = { d: dist(e.touches), s: settings.scale }; }, { passive: true });
+  mid.addEventListener('touchmove', e => {
+    if (!start || e.touches.length !== 2) return;
+    e.preventDefault();
+    settings.scale = Math.max(0.5, Math.min(4, start.s * dist(e.touches) / start.d));
+    document.documentElement.style.setProperty('--read-scale', String(settings.scale));
+    Reader.fl.fit();
+  }, { passive: false });
+  mid.addEventListener('touchend', e => { if (start && e.touches.length < 2) { Reader.pinchedAt = Date.now(); start = null; setScale(settings.scale); } });
+  // a trackpad pinch arrives as ctrl + wheel
+  mid.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); setScale(settings.scale * Math.exp(-e.deltaY / 300)); }, { passive: false });
+})();
 
 /* ================= start ================= */
 async function boot() {

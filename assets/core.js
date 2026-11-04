@@ -153,19 +153,40 @@ function buildTokens(paras) {
   return { words, para, kind, paraStart, starts, chapters: chapters.map(c => ({ start: c.start, title: c.title })) };
 }
 
-// How long each word stays up, in beats. The beat is scaled so the average over a text equals
-// the chosen words per minute, so "400 wpm" really means 400 words a minute, pauses included.
-function costsOf(tok, pauses) {
-  const n = tok.words.length, cost = new Float32Array(n), sum = new Float64Array(n + 1);
+/* ---------------- timing ----------------
+   The speed you set is the average for words. Each word's share follows its length, so "it" flashes
+   by and "discriminative" stays up longer, while the average word still gets 60000 / wpm ms.
+   `weight` blends between the same time for every word (0) and time in proportion to length (1).
+   Pauses are fixed milliseconds added after a word. They don't shrink when you speed up, so
+   there is always the same moment to blink. */
+const MIN_LETTERS = 3;          // shorter words get the time of a three-letter word, so they never just flicker
+const DEFAULT_TIMING = { weight: 1, comma: 100, sentence: 200, para: 400 };
+function lettersOf(w) { const [a, b] = coreBounds(w); return Math.max(MIN_LETTERS, b - a); }
+function costsOf(tok, timing) {
+  const t = Object.assign({}, DEFAULT_TIMING, timing || {});
+  const w = Math.max(0, Math.min(1, t.weight));
+  const n = tok.words.length, L = new Float32Array(n);
+  let m = 0;
+  for (let i = 0; i < n; i++) { L[i] = lettersOf(tok.words[i]); m += L[i]; }
+  m = n ? m / n : 5;
+  const cost = new Float32Array(n), pause = new Float32Array(n), sumCost = new Float64Array(n + 1), sumPause = new Float64Array(n + 1);
   for (let i = 0; i < n; i++) {
-    const w = tok.words[i], [a, b] = coreBounds(w), L = b - a;
-    let x = 1;
-    if (L > 7) x += Math.min(0.6, (L - 7) * 0.08);
-    if (/\d/.test(w)) x += 0.25;
-    if (pauses) { const k = tok.kind[i]; x += k === 1 ? 0.5 : k === 2 ? 1.2 : k === 3 ? 2.2 : 0; }
-    cost[i] = x; sum[i + 1] = sum[i] + x;
+    cost[i] = (1 - w) + w * L[i] / m;                  // averages exactly 1 beat over the text
+    const k = tok.kind[i];
+    pause[i] = k === 1 ? t.comma : k === 2 ? t.sentence : k === 3 ? t.para : 0;
+    sumCost[i + 1] = sumCost[i] + cost[i];
+    sumPause[i + 1] = sumPause[i] + pause[i];
   }
-  return { cost, sum, mean: n ? sum[n] / n : 1 };
+  return { cost, pause, sumCost, sumPause, meanLetters: m, weight: w };
+}
+// how many clause, sentence and paragraph breaks a text has
+function pauseCounts(tok) { const c = [0, 0, 0]; for (const k of tok.kind) if (k) c[k - 1]++; return c; }
+// Minutes to read a book (or the unread `1 - frac` of it) at a word speed, pauses included.
+function estimate({ tokens, words, pauses }, wpm, timing, frac = 0) {
+  const t = Object.assign({}, DEFAULT_TIMING, timing || {});
+  const n = tokens || words || 0;
+  const p = pauses || [n * 0.065, n * 0.05, n * 0.015];
+  return (1 - frac) * (n / wpm + (p[0] * t.comma + p[1] * t.sentence + p[2] * t.para) / 60000);
 }
 
 /* ---------------- formatting ---------------- */
@@ -196,12 +217,22 @@ class Flasher {
     this.wordEl = stage.querySelector('.word');
     this.lt = stage.querySelector('.lt'); this.pc = stage.querySelector('.pc'); this.rt = stage.querySelector('.rt');
     this.hooks = hooks; this.playing = false; this.cur = 0; this.wpm = 300; this.tok = null;
-    this.pauses = hooks.pauses || (() => true);
+    this.timing = hooks.timing || (() => DEFAULT_TIMING);
   }
   load(tok) { this.pause(true); this.tok = tok; this.cur = 0; this.ended = false; this.recost(); }
-  recost() { if (this.tok) { const c = costsOf(this.tok, this.pauses()); this.cost = c.cost; this.sum = c.sum; this.mean = c.mean; } }
+  recost() {
+    if (!this.tok) return;
+    const c = costsOf(this.tok, this.timing());
+    this.cost = c.cost; this.gap = c.pause; this.sumCost = c.sumCost; this.sumPause = c.sumPause;
+    this.meanLetters = c.meanLetters; this.weight = c.weight;
+  }
   get n() { return this.tok ? this.tok.words.length : 0; }
-  get beat() { return 60000 / (this.wpm * (this.mean || 1)); }
+  get beat() { return 60000 / this.wpm; }
+  // how long a given word would stay up at the current settings, in ms (pauses not included)
+  wordMs(w, wpm = this.wpm) {
+    const k = Math.max(0, Math.min(1, (this.timing() || DEFAULT_TIMING).weight ?? 1));
+    return 60000 / wpm * ((1 - k) + k * lettersOf(w) / (this.meanLetters || 5));
+  }
   text(w) {
     const p = pivotOf(w);
     this.lt.textContent = w.slice(0, p); this.pc.textContent = w[p] || ''; this.rt.textContent = w.slice(p + 1);
@@ -227,7 +258,7 @@ class Flasher {
     if (this.i >= this.n) { this.playing = false; this.ended = true; this.hooks.onState && this.hooks.onState(false); this.hooks.onEnd && this.hooks.onEnd(); return; }
     this.show(this.i);
     this.hooks.onWord && this.hooks.onWord(this.cur, true);
-    this.next += this.beat * this.cost[this.i] * (RAMP[this.ramp++] || 1);
+    this.next += this.beat * this.cost[this.i] * (RAMP[this.ramp++] || 1) + this.gap[this.i];
     this.i++;
     this.timer = setTimeout(() => this.step(), Math.max(0, this.next - performance.now()));
   }
@@ -249,7 +280,11 @@ class Flasher {
     if (dir < 0) { if (this.cur - st[k] < 3 && k > 0) k--; this.seek(st[k]); }
     else this.seek(k + 1 < st.length ? st[k + 1] : this.n - 1);
   }
-  minutesBetween(a, b) { return this.n ? (this.sum[Math.min(b, this.n)] - this.sum[a]) * this.beat / 60000 : 0; }
+  minutesBetween(a, b, wpm = this.wpm) {
+    if (!this.n) return 0;
+    b = Math.min(b, this.n);
+    return ((this.sumCost[b] - this.sumCost[a]) * 60000 / wpm + (this.sumPause[b] - this.sumPause[a])) / 60000;
+  }
   minutesLeft(from = this.cur) { return this.minutesBetween(from, this.n); }
 }
 
@@ -377,7 +412,7 @@ class Dial {
 
 /* ---------------- the shelf of free books ---------------- */
 // Spine width follows the book's length, so longer books look thicker.
-function renderShelf(el, catalog, { wpm, href, onPick, owned } = {}) {
+function renderShelf(el, catalog, { wpm, timing, href, onPick, owned } = {}) {
   el.textContent = '';
   const max = Math.max(...catalog.map(b => b.words));
   catalog.forEach((b, i) => {
@@ -385,7 +420,7 @@ function renderShelf(el, catalog, { wpm, href, onPick, owned } = {}) {
     a.className = 'spine tone-' + (i % 4);
     if (href) a.href = href(b); else a.type = 'button';
     a.style.setProperty('--w', (40 + 46 * Math.sqrt(b.words / max)).toFixed(1) + 'px');
-    const mins = b.words / wpm;
+    const mins = estimate(b, wpm, timing);
     a.setAttribute('aria-label', b.title + ' by ' + b.author + ', ' + fmtNum(b.words) + ' words, ' + fmtMin(mins) + ' at ' + wpm + ' words a minute');
     a.innerHTML = '<span class="spine-title"></span><span class="spine-author"></span><span class="spine-time"></span>';
     a.children[0].textContent = b.title;
@@ -406,6 +441,7 @@ const store = {
 window.Glance = {
   NORMAL_WPM, HEADING_MARK, ALNUM,
   coreBounds, pivotOf, endKind, splitLong, stripGutenberg, toParagraphs, looksLikeHeading, niceTitle, buildTokens, costsOf,
+  DEFAULT_TIMING, MIN_LETTERS, lettersOf, pauseCounts, estimate,
   fmtMin, fmtShort, fmtNum, ratio,
   Flasher, Dial, renderShelf, store, PIVOT_X,
 };

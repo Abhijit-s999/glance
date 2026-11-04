@@ -5,7 +5,14 @@
   "author": "Robert Louis Stevenson",
   "year": 1886,
   "words": 25574,
-  "file": "jekyll-and-hyde.txt"
+  "file": "jekyll-and-hyde.txt",
+  "tokens": 25643,
+  "pauses": [
+   2690,
+   843,
+   349
+  ],
+  "chapters": 10
  },
  {
   "id": "alice",
@@ -13,7 +20,14 @@
   "author": "Lewis Carroll",
   "year": 1865,
   "words": 26381,
-  "file": "alice.txt"
+  "file": "alice.txt",
+  "tokens": 26567,
+  "pauses": [
+   3048,
+   885,
+   802
+  ],
+  "chapters": 12
  },
  {
   "id": "a-christmas-carol",
@@ -21,7 +35,14 @@
   "author": "Charles Dickens",
   "year": 1843,
   "words": 28435,
-  "file": "a-christmas-carol.txt"
+  "file": "a-christmas-carol.txt",
+  "tokens": 28449,
+  "pauses": [
+   3184,
+   1229,
+   714
+  ],
+  "chapters": 5
  },
  {
   "id": "call-of-the-wild",
@@ -29,7 +50,14 @@
   "author": "Jack London",
   "year": 1903,
   "words": 31765,
-  "file": "call-of-the-wild.txt"
+  "file": "call-of-the-wild.txt",
+  "tokens": 31804,
+  "pauses": [
+   2665,
+   1374,
+   338
+  ],
+  "chapters": 7
  },
  {
   "id": "the-time-machine",
@@ -37,7 +65,14 @@
   "author": "H. G. Wells",
   "year": 1895,
   "words": 32377,
-  "file": "the-time-machine.txt"
+  "file": "the-time-machine.txt",
+  "tokens": 32546,
+  "pauses": [
+   2565,
+   1643,
+   323
+  ],
+  "chapters": 17
  },
  {
   "id": "the-great-gatsby",
@@ -45,7 +80,14 @@
   "author": "F. Scott Fitzgerald",
   "year": 1925,
   "words": 48127,
-  "file": "the-great-gatsby.txt"
+  "file": "the-great-gatsby.txt",
+  "tokens": 48493,
+  "pauses": [
+   3450,
+   1929,
+   1619
+  ],
+  "chapters": 9
  },
  {
   "id": "frankenstein",
@@ -53,7 +95,14 @@
   "author": "Mary Shelley",
   "year": 1818,
   "words": 74969,
-  "file": "frankenstein.txt"
+  "file": "frankenstein.txt",
+  "tokens": 75074,
+  "pauses": [
+   6052,
+   2596,
+   790
+  ],
+  "chapters": 28
  },
  {
   "id": "dorian-gray",
@@ -61,7 +110,14 @@
   "author": "Oscar Wilde",
   "year": 1890,
   "words": 78928,
-  "file": "dorian-gray.txt"
+  "file": "dorian-gray.txt",
+  "tokens": 79153,
+  "pauses": [
+   5804,
+   5034,
+   1521
+  ],
+  "chapters": 21
  },
  {
   "id": "sherlock-holmes",
@@ -69,7 +125,14 @@
   "author": "Arthur Conan Doyle",
   "year": 1892,
   "words": 104423,
-  "file": "sherlock-holmes.txt"
+  "file": "sherlock-holmes.txt",
+  "tokens": 104601,
+  "pauses": [
+   8047,
+   4280,
+   2542
+  ],
+  "chapters": 14
  },
  {
   "id": "pride-and-prejudice",
@@ -77,6 +140,13 @@
   "author": "Jane Austen",
   "year": 1813,
   "words": 121703,
-  "file": "pride-and-prejudice.txt"
+  "file": "pride-and-prejudice.txt",
+  "tokens": 121737,
+  "pauses": [
+   11164,
+   3964,
+   2122
+  ],
+  "chapters": 61
  }
 ]

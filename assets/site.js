@@ -6,7 +6,11 @@ const $ = s => document.querySelector(s);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const settings = G.store.get('glance:settings', {});
-let wpm = settings.wpm || 400;
+let wpm = settings.wpm || 450;
+// the same timing the reader uses: word time follows length, pauses are fixed milliseconds
+const D = G.DEFAULT_TIMING;
+const timing = { weight: settings.weight ?? D.weight, comma: settings.pauseComma ?? D.comma, sentence: settings.pauseSentence ?? D.sentence, para: settings.pausePara ?? D.para };
+const est = (b, w) => G.estimate(b, w, timing);
 let catalog = [];
 
 /* ---------------- hero: a live reader and the dial ---------------- */
@@ -16,6 +20,7 @@ const PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><
 const playBtn = $('#hero-play');
 let wantPlay = !reduced, visible = true, loopT = 0;
 const fl = new G.Flasher($('#hero-stage'), {
+  timing: () => timing,
   onEnd: () => { loopT = setTimeout(() => { loopT = 0; if (wantPlay && visible) { fl.seek(0); fl.play(); } }, 1200); },
 });
 fl.load(G.buildTokens([DEMO]));
@@ -36,12 +41,12 @@ setTimeout(sync, 700);
 const dial = new G.Dial($('#hero-dial'), { value: wpm, onInput: v => setWpm(v, 'dial') });
 function heroCompare() {
   const box = $('#hero-compare'); box.textContent = '';
-  const r = wpm / G.NORMAL_WPM;
-  box.append(el('p', 'big', r >= 1.05 ? G.ratio(wpm) + '× faster' : r > 0.95 ? 'A typical speed' : 'Unhurried'));
-  box.append(el('p', null, r >= 1.05 ? 'than a typical reader, who manages about 250 words a minute.' : 'About as fast as, or slower than, most people read a printed page.'));
   const g = catalog.find(b => b.id === 'the-great-gatsby') || { title: 'The Great Gatsby', words: 48127 };
+  const normal = g.words / G.NORMAL_WPM, mine = est(g, wpm), r = normal / mine;
+  box.append(el('p', 'big', r >= 1.05 ? (Math.round(r * 10) / 10).toFixed(1).replace(/\.0$/, '') + '× faster' : r > 0.95 ? 'A typical speed' : 'Unhurried'));
+  box.append(el('p', null, r >= 1.05 ? 'than a typical reader at 250 words a minute, pauses included.' : 'About as fast as, or slower than, most people read a printed page.'));
   const p = el('p');
-  p.append(el('b', null, g.title), ' in ', el('b', null, G.fmtMin(g.words / wpm)), (r >= 1 ? ' instead of ' : ' compared with ') + G.fmtMin(g.words / G.NORMAL_WPM) + '.');
+  p.append(el('b', null, g.title), ' in ', el('b', null, G.fmtMin(mine)), (r >= 1 ? ' instead of ' : ' compared with ') + G.fmtMin(normal) + '.');
   box.append(p);
 }
 function setWpm(v, from) {
@@ -141,12 +146,12 @@ const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&
 function chart() {
   if (!catalog.length) return;
   const box = $('#chart'); box.textContent = '';
-  const maxMin = Math.max(...catalog.map(b => b.words)) / Math.min(G.NORMAL_WPM, wpm);
+  const maxMin = Math.max(...catalog.map(b => Math.max(b.words / G.NORMAL_WPM, est(b, wpm))));
   const stepH = maxMin / 60 > 10 ? 2 : 1;
   const top = Math.ceil(maxMin / 60 / stepH) * stepH * 60;
   const pc = m => (100 * m / top).toFixed(2) + '%';
   for (const b of catalog) {
-    const n = b.words / G.NORMAL_WPM, g = b.words / wpm;
+    const n = b.words / G.NORMAL_WPM, g = est(b, wpm);
     const row = el('div', 'crow');
     const bt = el('div', 'bt', b.title); bt.append(el('small', null, b.author));
     const bars = el('div', 'bars');
@@ -172,19 +177,22 @@ function chart() {
   const t = $('#chart-table'); t.textContent = '';
   const head = el('tr'); for (const h of ['Book', 'Words', 'Reading normally (250 wpm)', 'Glance (' + wpm + ' wpm)']) head.append(el('th', null, h));
   t.append(head);
-  for (const b of catalog) { const r = el('tr'); for (const c of [b.title, G.fmtNum(b.words), G.fmtMin(b.words / G.NORMAL_WPM), G.fmtMin(b.words / wpm)]) r.append(el('td', null, c)); t.append(r); }
+  for (const b of catalog) { const r = el('tr'); for (const c of [b.title, G.fmtNum(b.words), G.fmtMin(b.words / G.NORMAL_WPM), G.fmtMin(est(b, wpm))]) r.append(el('td', null, c)); t.append(r); }
   const all = catalog.reduce((s, b) => s + b.words, 0);
   $('#all-normal').textContent = G.fmtMin(all / G.NORMAL_WPM);
-  $('#all-glance').textContent = G.fmtMin(all / wpm);
+  $('#all-glance').textContent = G.fmtMin(catalog.reduce((s, b) => s + est(b, wpm), 0));
 }
 function year() {
   const perYear = w => Math.round(20 * 365 * w / 90000);
+  // overall words a minute once pauses are counted, measured on the free books
+  const words = catalog.reduce((s, b) => s + b.words, 0);
+  const overall = catalog.length ? words / catalog.reduce((s, b) => s + est(b, wpm), 0) : wpm / 1.15;
   $('#year-normal').textContent = perYear(G.NORMAL_WPM);
-  $('#year-glance').textContent = perYear(wpm);
+  $('#year-glance').textContent = perYear(overall);
 }
 function shelf() {
   if (!catalog.length) return;
-  G.renderShelf($('#shelf'), catalog, { wpm, href: b => 'read/?book=' + encodeURIComponent(b.id) });
+  G.renderShelf($('#shelf'), catalog, { wpm, timing, href: b => 'read/?book=' + encodeURIComponent(b.id) });
 }
 $('#step-down').addEventListener('click', () => setWpm(wpm - 10));
 $('#step-up').addEventListener('click', () => setWpm(wpm + 10));

@@ -18,7 +18,9 @@
 ## How the reading works
 
 - **Focus letter.** The highlighted letter sits a little left of the word's middle, close to the optimal viewing position for word recognition (O'Regan & Jacobs, 1992).
-- **Real words per minute.** The speed you pick is the true average, pauses included. Words linger longer at commas, full stops and paragraph breaks, and a little longer when they're long.
+- **Time in proportion to length.** The speed you pick is the average for words. Each word gets a share in proportion to its length, so at 550 wpm "it" flashes for 72 ms and "discriminative" stays for 335 ms. Words shorter than three letters are timed as three. You can blend this back toward the same time for every word.
+- **Fixed pauses for blinking.** Commas and dashes, sentence ends and new paragraphs each get a pause in milliseconds (default 100, 200 and 400). The pauses don't shrink as you speed up, and each one is adjustable. Time estimates and comparisons include them.
+- **Any word size.** A slider from 50% to 400%, pinch on touch screens, a trackpad pinch, or the − and + keys.
 - **Built around the known limits** of rapid serial visual presentation. These are fewer regressions (Schotter, Tran & Rayner, 2014), fewer blinks (Benedetto et al., 2015) and lower comprehension at high speeds (Ricciardi & Di Nocera, 2017). The landing page has the full references.
 
 ## Run it locally

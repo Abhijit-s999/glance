@@ -6,7 +6,7 @@ Strips the Gutenberg header, footer and licence (and every reference to the trad
 front matter and contents lists, illustration notes and _italic_ markers, then writes
 books/<id>.txt and books/catalog.json.
 """
-import json, pathlib, re, sys
+import json, pathlib, re, subprocess, sys
 
 BOOKS = [  # id, gutenberg no., title, author, year, regex for the first line of the text
     ("call-of-the-wild", 215, "The Call of the Wild", "Jack London", 1903, r"^Chapter I\. Into the Primitive"),
@@ -52,6 +52,8 @@ def main(src: pathlib.Path):
         print(f"{bid:22} {words:7d} words  starts: {text[:60]!r}")
     catalog.sort(key=lambda b: b["words"])
     (out / "catalog.json").write_text(json.dumps(catalog, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+    # token and pause counts come from the reader's own tokenizer
+    subprocess.run(["node", str(root / "tools" / "annotate_catalog.js")], check=True)
 
 if __name__ == "__main__":
     main(pathlib.Path(sys.argv[1]))
